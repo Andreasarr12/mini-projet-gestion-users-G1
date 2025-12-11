@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Gestion des utilisateurs</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <h1>Gestion des utilisateurs</h1>
+    <p class="subtitle">Mini plateforme – Node.js / Express / MySQL</p>
+
+    <p>
+      <a href="/logout">Se déconnecter</a>
+    </p>
+
+    <!-- Formulaire d'ajout d'utilisateur -->
+    <h2>Ajouter un utilisateur</h2>
+    <form id="addUserForm">
+      <div>
+        <label for="prenom">Prénom :</label>
+        <input type="text" id="prenom" name="prenom" required>
+      </div>
+
+      <div>
+        <label for="nom">Nom :</label>
+        <input type="text" id="nom" name="nom" required>
+      </div>
+
+      <div>
+        <label for="loginUser">Login :</label>
+        <input type="text" id="loginUser" name="login" required>
+      </div>
+
+      <div>
+        <label for="passwordUser">Mot de passe :</label>
+        <input type="password" id="passwordUser" name="password" required>
+      </div>
+
+      <div>
+        <label for="role">Rôle :</label>
+        <input type="text" id="role" name="role" placeholder="admin, user..." required>
+      </div>
+
+      <button type="submit">Ajouter</button>
+      <p id="message" style="color: red; font-size:13px;"></p>
+    </form>
+
+    <hr>
+
+    <!-- Recherche -->
+    <h2>Rechercher un utilisateur</h2>
+    <div class="search-row">
+      <input type="text" id="searchInput" placeholder="Nom, prénom ou login">
+      <button id="searchBtn">Rechercher</button>
+      <button id="resetBtn" class="btn-secondary">Réinitialiser</button>
+    </div>
+
+    <hr>
+
+    <!-- Liste des utilisateurs -->
+    <h2>Liste des utilisateurs</h2>
+
+    <table border="1" cellpadding="5">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Prénom</th>
+          <th>Nom</th>
+          <th>Login</th>
+          <th>Rôle</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="usersTableBody">
+        <!-- Lignes ajoutées dynamiquement en JS -->
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    const tableBody = document.getElementById('usersTableBody');
+    const addUserForm = document.getElementById('addUserForm');
+    const message = document.getElementById('message');
+
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    // Charger la liste des utilisateurs (avec option de recherche)
+    async function loadUsers(search = '') {
+      const response = await fetch('/api/users?search=' + encodeURIComponent(search));
+      const users = await response.json();
+
+      tableBody.innerHTML = '';
+
+      users.forEach(user => {
+        const tr = document.createElement('tr');
+
+        tr.innerHTML = `
+          <td>${user.id}</td>
+          <td>${user.prenom}</td>
+          <td>${user.nom}</td>
+          <td>${user.login}</td>
+          <td>${user.role}</td>
+          <td>
+            <button onclick="editUser(${user.id}, '${user.prenom}', '${user.nom}', '${user.login}', '${user.role}')">Modifier</button>
+            <button class="btn-danger" onclick="deleteUser(${user.id})">Supprimer</button>
+          </td>
+        `;
+
+        tableBody.appendChild(tr);
+      });
+    }
+
+    // Soumission du formulaire d'ajout
+    addUserForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      message.textContent = '';
+
+      const data = {
+        prenom: document.getElementById('prenom').value,
+        nom: document.getElementById('nom').value,
+        login: document.getElementById('loginUser').value,
+        password: document.getElementById('passwordUser').value,
+        role: document.getElementById('role').value
+      };
+
+      try {
+        const response = await fetch('/api/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          message.textContent = result.error || 'Erreur lors de la création';
+        } else {
+          message.style.color = 'green';
+          message.textContent = 'Utilisateur ajouté avec succès';
+          addUserForm.reset();
+          message.style.color = 'red';
+          loadUsers();
+        }
+      } catch (error) {
+        console.error(error);
+        message.textContent = 'Erreur réseau';
+      }
+    });
+
+    // Supprimer un utilisateur
+    async function deleteUser(id) {
+      const confirmDelete = confirm('Tu es sûr de vouloir supprimer cet utilisateur ?');
+      if (!confirmDelete) return;
+
+      try {
+        const response = await fetch('/api/users/' + id, {
+          method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          alert(result.error || 'Erreur lors de la suppression');
+        } else {
+          loadUsers();
+        }
+      } catch (error) {
+        console.error(error);
+        alert('Erreur réseau');
+      }
+    }
+
+    // Modifier un utilisateur
+    async function editUser(id, prenom, nom, login, role) {
+      const newPrenom = prompt('Nouveau prénom :', prenom);
+      if (newPrenom === null) return;
+
+      const newNom = prompt('Nouveau nom :', nom);
+      if (newNom === null) return;
+
+      const newLogin = prompt('Nouveau login :', login);
+      if (newLogin === null) return;
+
+      const newRole = prompt('Nouveau rôle :', role);
+      if (newRole === null) return;
+
+      const newPassword = prompt('Nouveau mot de passe :', '');
+      if (!newPassword) {
+        alert('Pour la démo, on exige un nouveau mot de passe.');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/users/' + id, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            prenom: newPrenom,
+            nom: newNom,
+            login: newLogin,
+            password: newPassword,
+            role: newRole
+          })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          alert(result.error || 'Erreur lors de la modification');
+        } else {
+          loadUsers();
+        }
+      } catch (error) {
+        console.error(error);
+        alert('Erreur réseau');
+      }
+    }
+
+    // Recherche
+    searchBtn.addEventListener('click', () => {
+      const value = searchInput.value;
+      loadUsers(value);
+    });
+
+    resetBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      loadUsers();
+    });
+
+    // Charger les utilisateurs au chargement de la page
+    loadUsers();
+  </script>
+</body>
+</html>

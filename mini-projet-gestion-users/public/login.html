@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Connexion - Gestion des utilisateurs</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-container login-wrapper">
+    <div class="login-title">
+      <h1>Connexion</h1>
+      <p>Mini plateforme de gestion des utilisateurs</p>
+    </div>
+
+    <form method="POST" action="/login">
+      <div>
+        <label for="login">Login :</label>
+        <input type="text" id="login" name="login" required>
+      </div>
+
+      <div>
+        <label for="password">Mot de passe :</label>
+        <input type="password" id="password" name="password" required>
+      </div>
+
+      <button type="submit">Se connecter</button>
+
+      <p id="error" style="color:#e13030; font-size:13px; margin-top:8px;"></p>
+    </form>
+  </div>
+
+  <script>
+    // Affiche un message si ?error=1 dans l'URL
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error') === '1') {
+      document.getElementById('error').textContent = 'Login ou mot de passe incorrect';
+    }
+  </script>
+</body>
+</html>
